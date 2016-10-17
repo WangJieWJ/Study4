@@ -282,3 +282,144 @@ public class ReviewService {
 
 }
 ```
+
+7、配置文件 pom.xml
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>trs.com.cn</groupId>
+    <artifactId>SeasonConnectSQL</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>war</packaging>
+
+    <parent>
+        <artifactId>season-parent</artifactId>
+        <groupId>trs.com.cn</groupId>
+        <version>1.2</version>
+    </parent>
+
+    <dependencies>
+        <dependency>
+            <groupId>trs.com.cn</groupId>
+            <artifactId>season-core</artifactId><!-- 其中包含了好多依赖  -->
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-tomcat</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.5</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet.jsp</groupId>
+            <artifactId>jsp-api</artifactId>
+            <version>2.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.sf.json-lib</groupId>
+            <artifactId>json-lib</artifactId>
+            <version>2.4</version>
+            <classifier>jdk15</classifier>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>SeasonConnectSQL</finalName>
+    </build>
+
+</project>
+```
+
+## 前台商品详细信息模板代码
+```html
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="cn">
+<head>
+<META content="text/html; charset=UTF-8" http-equiv=Content-Type>
+<h1 style="display:none" class="nav_hide">产品详情</h1>
+<title>产品详情</title>
+
+<script type="text/javascript" src="../../JS/jquery-1.11.1.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+
+$("#b05").click(function(){
+	 $.getJSON("http://localhost:8080/SeasonConnectSQL/hello/get",
+	 {"RName":$("#b05_1").attr("value")},   //向后台传递参数  商品的名称！！！
+	 function(data) {
+        $("#myDiv5").html("");
+        $.each(data, function(i, item) {
+            $("#myDiv5").append(
+		 "<div>游客" + (i+1) + "</div>" + 
+                    "<div>" + item.cONTENT + "</div>" + 
+                    "<div>" + item.rDATE    + "</div>" +
+                    "<div>" + item.rNAME + "</div><hr/>");
+        });
+        });
+   });
+
+$("#b06").click(function(){
+	 $.getJSON("http://localhost:8080/SeasonConnectSQL/hello/save",
+	 {RName:$("#b05_1").attr("value"),RContent:$("input[id='b06_1']").val()},   //向后台传递参数  商品的名称,商品评价！！！！
+	 function(data) {
+        $("#myDiv5").html("");
+        $.each(data, function(i, item) {
+           
+        });
+        });
+   });
+
+})
+</script>
+
+</head>
+
+<body>
+
+
+<div style="margin:0 auto; width:950px;">
+
+<TRS_XAPPENDIXS ID="OWNER" MODE="PIC">
+ <img src='<TRS_XAPPENDIX FIELD="_RECURL" upload="true"/>' border=0 alt="图片不存在！" width="80" height="80" /> 
+</TRS_XAPPENDIXS>  <br/>
+
+
+<h2>显示商品详情：</h2>
+
+<TRS_DOCUMENT field="DOCCONTENT"  dateformat="yyyy-MM-dd HH:mm:ss" autocolor="TRUE" autoformat="FALSE" autoformattype="HTML" autolink="FALSE"  target="_blank" linkalt="FALSE" ></TRS_DOCUMENT>
+
+<br/>
+<h2>显示评论：</h2><br/>
+
+<!--使用模板-->
+<TRS_DEFOBJECTS TABLENAME="review" IDFIELDNAME="RID" where="RNAME='电脑'">
+评论内容：<TRS_DEFOBJECT FIELD="RCONTENT"/><br/>
+发布时间：<TRS_DEFOBJECT FIELD="RDATE" DATEFORMAT="yyyy-MM-dd"/><br/><br/>
+</TRS_DEFOBJECTS>
+
+
+<!--使用JS解析JSON数据-->
+<div id="myDiv5"><h2>显示评论</h2></div>
+<input id="b05_1" type="hidden" name="content" title="Review Content" value="" /><br/>
+<button id="b05" type="button">显示更多评论</button><br/>
+
+   请书写评论：<input id="b06_1" type="text" name="text" title="Review Content" />
+<button id="b06" type="button">提交评论：</button> 
+
+</div>
+
+</body>
+</html> 
+```
+
+
