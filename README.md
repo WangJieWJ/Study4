@@ -439,5 +439,7 @@ $("#b06").click(function(){
 </body>
 </html> 
 ```
+## 最终效果图
+![效果图](img/效果图.png)
 
 
