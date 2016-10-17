@@ -2,7 +2,7 @@
 评论互动功能实现
 
 ## Season代码
-![项目结构目录](img/项目结构目录.png)
+![项目目录结构](img/项目目录结构.png)
 
 1、Season启动类：APP.java
 ```java
