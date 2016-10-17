@@ -1,7 +1,19 @@
 # Study4
 评论互动功能实现
 
-## Season代码
+## 数据库设计
+
+```sql
+-- 创建评论表
+create table review(
+RID int auto_increment primary key,  	-- 评论的编号
+RNAME varchar(20) not null,				-- 评论商品的名字
+RCONTENT varchar(200) not null,			-- 评论内容
+RDATE DATETIME not null					-- 评论时间
+);
+```
+
+## 后台
 ![项目目录结构](img/项目目录结构.png)
 
 1、Season启动类：APP.java
