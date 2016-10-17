@@ -355,6 +355,8 @@ public class ReviewService {
 <script type="text/javascript">
 $(document).ready(function(){
 
+//显示所有商品的所有评论
+
 $("#b05").click(function(){
 	 $.getJSON("http://localhost:8080/SeasonConnectSQL/hello/get",
 	 {"RName":$("#b05_1").attr("value")},   //向后台传递参数  商品的名称！！！
@@ -369,6 +371,8 @@ $("#b05").click(function(){
         });
         });
    });
+
+//提交评论信息
 
 $("#b06").click(function(){
 	 $.getJSON("http://localhost:8080/SeasonConnectSQL/hello/save",
@@ -403,7 +407,7 @@ $("#b06").click(function(){
 <br/>
 <h2>显示评论：</h2><br/>
 
-<!--使用模板-->
+<!--使用模板显示评论表中的信息评论-->
 <TRS_DEFOBJECTS TABLENAME="review" IDFIELDNAME="RID" where="RNAME='电脑'">
 评论内容：<TRS_DEFOBJECT FIELD="RCONTENT"/><br/>
 发布时间：<TRS_DEFOBJECT FIELD="RDATE" DATEFORMAT="yyyy-MM-dd"/><br/><br/>
@@ -412,7 +416,7 @@ $("#b06").click(function(){
 
 <!--使用JS解析JSON数据-->
 <div id="myDiv5"><h2>显示评论</h2></div>
-<input id="b05_1" type="hidden" name="content" title="Review Content" value="" /><br/>
+<input id="b05_1" type="hidden" name="content" title="Review Content" value="<TRS_DOCUMENT field="DOCTITLE"          ></TRS_DOCUMENT>" /><br/>
 <button id="b05" type="button">显示更多评论</button><br/>
 
    请书写评论：<input id="b06_1" type="text" name="text" title="Review Content" />
