@@ -73,7 +73,6 @@ public class TestController extends Controller {
     public void save() {
         String RName = getPara("RName");
         String RContent = getPara("RContent");
-        String URL=getPara("URL");
         Review review=new Review(RName,RContent);
         ReviewService reviewService=new ReviewService();
         reviewService.saveReview(review);
@@ -84,7 +83,6 @@ public class TestController extends Controller {
 
     public void get() {
         String RName=getPara("RName");
-        String URL=getPara("URL");
         ReviewService reviewService=new ReviewService();
         List<Review> lists=reviewService.getReviewByName(RName);
 
