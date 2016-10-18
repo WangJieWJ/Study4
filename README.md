@@ -158,55 +158,6 @@ public class ReviewDao {
         });
     }
 
-
-
-
-//    public List<Review> getReviewsByName(String Rname) {
-//        Connection connection = null;
-//        PreparedStatement preparedStatement = null;
-//        ResultSet RS = null;
-//        try {
-//            Class.forName("com.mysql.jdbc.Driver");
-//            connection = DriverManager.getConnection("jdbc:mysql:///TRSWCMV7", "root", "MySQL_1234");
-//            String sql = "SELECT * FROM review where RNAME=?";
-//            preparedStatement = connection.prepareStatement(sql);
-//            preparedStatement.setString(1, Rname);
-//            RS = preparedStatement.executeQuery();
-//            List<Review> lists = new ArrayList<Review>();
-//            while (RS.next()) {
-//                lists.add(new Review(RS.getString(2), RS.getString(3), RS.getDate(4)));
-//            }
-//            return lists;
-//        } catch (Exception e) {
-//            return null;
-//        } finally {
-//            try {
-//                if (RS != null)
-//                    RS.close();
-//                if (preparedStatement != null)
-//                    preparedStatement.close();
-//                if (connection != null)
-//                    connection.close();
-//            } catch (SQLException e) {
-//            }
-//        }
-//    }
-
-//    public void saveReview(Review review) {
-//        Connection connection = null;
-//        PreparedStatement preparedStatement = null;
-//        try {
-//            Class.forName("com.mysql.jdbc.Driver");
-//            connection = DriverManager.getConnection("jdbc:mysql:///TRSWCMV7", "root", "MySQL_1234");
-//            String sql = "INSERT INTO review(RNAME,RCONTENT) values(?,?)";
-//            preparedStatement = connection.prepareStatement(sql);
-//            preparedStatement.setString(1, review.getRNAME());
-//            preparedStatement.setString(2, review.getCONTENT());
-//            preparedStatement.execute();
-//        } catch (Exception e) {
-//        }
-//    }
-
     public int saveReview(Review review){
         String sql="INSERT INTO review(RNAME,RCONTENT) values(?,?)";
         Object[] params=new Object[]{review.getRNAME(),review.getCONTENT()};
