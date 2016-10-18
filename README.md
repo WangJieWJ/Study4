@@ -320,7 +320,7 @@ public class ReviewService {
         <dependency>
             <groupId>trs.com.cn</groupId>
             <artifactId>season-core</artifactId><!-- 其中包含了好多依赖  -->
-            <exclusions>
+            <exclusions> <!-- 排除内嵌的Tomcat服务器 -->
                 <exclusion>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-starter-tomcat</artifactId>
@@ -338,12 +338,6 @@ public class ReviewService {
             <artifactId>jsp-api</artifactId>
             <version>2.1</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.sf.json-lib</groupId>
-            <artifactId>json-lib</artifactId>
-            <version>2.4</version>
-            <classifier>jdk15</classifier>
         </dependency>
     </dependencies>
 
