@@ -6,10 +6,10 @@
 ```sql
 -- 创建评论表
 create table review(
-RID int auto_increment primary key,  	-- 评论的编号
-RNAME varchar(20) not null,				-- 评论商品的名字
+RID int auto_increment primary key,  	        -- 评论的编号
+RNAME varchar(20) not null,		        -- 评论商品的名字
 RCONTENT varchar(200) not null,			-- 评论内容
-RDATE DATETIME not null					-- 评论时间
+RDATE DATETIME					-- 评论时间
 );
 ```
 
@@ -36,17 +36,45 @@ public class App extends SeasonApplication {
 
 2、配置启动类：ServletInitializer.java
 ```java
-package com.trs.config;
+package com.trs;
+import com.season.core.spring.SeasonApplication;
+import com.season.core.spring.SeasonRunner;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 
-import com.season.core.spring.SeasonServletInitializer;
+import javax.sql.DataSource;
 
 /**
  * Created by wangjie on 2016/10/14 0014.
  */
-public class ServletInitializer extends SeasonServletInitializer{
-    @Override
-    protected Class<?> getAppClass() {
-        return App.class;
+@Configuration
+@EnableAutoConfiguration
+@ComponentScan
+public class App extends SeasonApplication {
+
+    public static void main(String[] args){
+        SeasonRunner.run(App.class,args);
+    }
+
+    @Bean
+    public JdbcTemplate jdbcTemplate(DataSource dataSource){
+        return new JdbcTemplate(dataSource);
+    }
+
+    @Bean
+    public DataSource dataSource(){
+        DriverManagerDataSource ds=new DriverManagerDataSource();
+        ds.setDriverClassName("com.mysql.jdbc.Driver");
+        ds.setUrl("jdbc:mysql:///TRSWCMV7");
+        ds.setUsername("root");
+        ds.setPassword("MySQL_1234");
+        return ds;
     }
 }
 ```
@@ -60,6 +88,7 @@ import com.season.core.Controller;
 import com.season.core.ControllerKey;
 import com.trs.domain.Review;
 import com.trs.service.ReviewService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
@@ -69,25 +98,22 @@ import java.util.List;
 @ControllerKey("hello")
 public class TestController extends Controller {
 
+    @Autowired
+    private ReviewService reviewService;
+
 
     public void save() {
         String RName = getPara("RName");
         String RContent = getPara("RContent");
         Review review=new Review(RName,RContent);
-        ReviewService reviewService=new ReviewService();
-        reviewService.saveReview(review);
-
-        renderText("存储成功！");   
-        //调用方式：http://localhost:8080/hello/save?RName=WJ&RContent=%E5%86%85%E5%AE%B9%E7%95%8C%E9%9D%A2&URL=asdasdasdasd
+        int a=reviewService.saveReview(review);
+        renderText("受影响的行数"+a);   //http://localhost:8080/hello/save?RName=WJ&RContent=%E5%86%85%E5%AE%B9%E7%95%8C%E9%9D%A2&URL=asdasdasdasd
     }
 
     public void get() {
         String RName=getPara("RName");
-        ReviewService reviewService=new ReviewService();
         List<Review> lists=reviewService.getReviewByName(RName);
-
         JSON json= (JSON) JSONArray.toJSON(lists);
-
         renderText(json.toJSONString());
     }
 }
@@ -98,60 +124,93 @@ public class TestController extends Controller {
 package com.trs.dao;
 
 import com.trs.domain.Review;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Repository;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by wangjie on 2016/10/15 0015.
  */
+@Repository
 public class ReviewDao {
 
-    public List<Review> getReviewsByName(String Rname) {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet RS = null;
-        try {
-            Class.forName("com.mysql.jdbc.Driver");
-            connection = DriverManager.getConnection("jdbc:mysql:///TRSWCMV7", "root", "MySQL_1234");
-            String sql = "SELECT * FROM review where RNAME=?";
-            preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, Rname);
-            RS = preparedStatement.executeQuery();
-            List<Review> lists = new ArrayList<Review>();
-            while (RS.next()) {
-                lists.add(new Review(RS.getString(2), RS.getString(3), RS.getDate(4)));
+
+    @Autowired
+    private  JdbcTemplate jdbcTemplate;
+
+    public List<Review> getReviewsByName(String Rname){
+        String sql = "SELECT * FROM review where RNAME=?";
+        Object[] params=new Object[]{Rname};
+        return jdbcTemplate.query(sql, params, new RowMapper<Review>() {
+            @Override
+            public Review mapRow(ResultSet resultSet, int i) throws SQLException {
+                Review review=new Review();
+                review.setRID(resultSet.getInt("RID"));
+                review.setCONTENT(resultSet.getString("RCONTENT"));
+                review.setRNAME(resultSet.getString("RNAME"));
+                review.setRDATE(resultSet.getDate("RDATE"));
+                return review;
             }
-            return lists;
-        } catch (Exception e) {
-            return null;
-        } finally {
-            try {
-                if (RS != null)
-                    RS.close();
-                if (preparedStatement != null)
-                    preparedStatement.close();
-                if (connection != null)
-                    connection.close();
-            } catch (SQLException e) {
-            }
-        }
+        });
     }
 
-    public void saveReview(Review review) {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        try {
-            Class.forName("com.mysql.jdbc.Driver");
-            connection = DriverManager.getConnection("jdbc:mysql:///TRSWCMV7", "root", "MySQL_1234");
-            String sql = "INSERT INTO review(RNAME,RCONTENT) values(?,?)";
-            preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, review.getRNAME());
-            preparedStatement.setString(2, review.getCONTENT());
-            preparedStatement.execute();
-        } catch (Exception e) {
-        }
+
+
+
+//    public List<Review> getReviewsByName(String Rname) {
+//        Connection connection = null;
+//        PreparedStatement preparedStatement = null;
+//        ResultSet RS = null;
+//        try {
+//            Class.forName("com.mysql.jdbc.Driver");
+//            connection = DriverManager.getConnection("jdbc:mysql:///TRSWCMV7", "root", "MySQL_1234");
+//            String sql = "SELECT * FROM review where RNAME=?";
+//            preparedStatement = connection.prepareStatement(sql);
+//            preparedStatement.setString(1, Rname);
+//            RS = preparedStatement.executeQuery();
+//            List<Review> lists = new ArrayList<Review>();
+//            while (RS.next()) {
+//                lists.add(new Review(RS.getString(2), RS.getString(3), RS.getDate(4)));
+//            }
+//            return lists;
+//        } catch (Exception e) {
+//            return null;
+//        } finally {
+//            try {
+//                if (RS != null)
+//                    RS.close();
+//                if (preparedStatement != null)
+//                    preparedStatement.close();
+//                if (connection != null)
+//                    connection.close();
+//            } catch (SQLException e) {
+//            }
+//        }
+//    }
+
+//    public void saveReview(Review review) {
+//        Connection connection = null;
+//        PreparedStatement preparedStatement = null;
+//        try {
+//            Class.forName("com.mysql.jdbc.Driver");
+//            connection = DriverManager.getConnection("jdbc:mysql:///TRSWCMV7", "root", "MySQL_1234");
+//            String sql = "INSERT INTO review(RNAME,RCONTENT) values(?,?)";
+//            preparedStatement = connection.prepareStatement(sql);
+//            preparedStatement.setString(1, review.getRNAME());
+//            preparedStatement.setString(2, review.getCONTENT());
+//            preparedStatement.execute();
+//        } catch (Exception e) {
+//        }
+//    }
+
+    public int saveReview(Review review){
+        String sql="INSERT INTO review(RNAME,RCONTENT) values(?,?)";
+        Object[] params=new Object[]{review.getRNAME(),review.getCONTENT()};
+        return jdbcTemplate.update(sql,params);
     }
 }
 ```
@@ -239,41 +298,19 @@ package com.trs.service;
 
 import com.trs.dao.ReviewDao;
 import com.trs.domain.Review;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 /**
  * Created by wangjie on 2016/10/14 0014.
  */
-//@Repository
+@Service
 public class ReviewService {
 
-//    @Autowired
-//    private DataSource dataSource;
-//
-//    private JdbcTemplate jdbcTemplate;
-//
-//    @Autowired
-//    public void setJdbcTemplate(JdbcTemplate jdbcTemplate){
-//        jdbcTemplate.setDataSource(dataSource);
-//        this.jdbcTemplate=jdbcTemplate;
-//    }
-//
-//    public List<Review> getList(){
-//        String sql="SELECT * FROM Review";
-//        return jdbcTemplate.queryForList(sql,Review.class);
-//    }
-//
-//    public void save(String RNAME,String RCONTENT){
-//        String sql="INSERT INTO Review(RNAME,RCONTENT) values("+RNAME+","+RCONTENT+")";
-//        jdbcTemplate.execute(sql);
-//    }
-
+    @Autowired
     private ReviewDao reviewDao;
-
-    public ReviewService(){
-        this.reviewDao=new ReviewDao();
-    }
 
     /***
      * 按照名称查找所有评论
@@ -288,8 +325,8 @@ public class ReviewService {
      * 保存评论
      * @param review
      */
-    public void saveReview(Review review){
-        reviewDao.saveReview(review);
+    public int saveReview(Review review){
+        return reviewDao.saveReview(review);
     }
 
 }
@@ -303,7 +340,7 @@ public class ReviewService {
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>trs.com.cn</groupId>
+    <groupId>trs.com.cn1</groupId>
     <artifactId>SeasonConnectSQL</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
@@ -318,29 +355,37 @@ public class ReviewService {
         <dependency>
             <groupId>trs.com.cn</groupId>
             <artifactId>season-core</artifactId><!-- 其中包含了好多依赖  -->
-            <exclusions> <!-- 排除内嵌的Tomcat服务器 -->
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-tomcat</artifactId>
-                </exclusion>
-            </exclusions>
+            <!--   要运行在其他Tomcat服务器上时，要打成war包，并需要取消注释
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-starter-tomcat</artifactId>
+                    </exclusion>
+                </exclusions>
+            -->
         </dependency>
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>servlet-api</artifactId>
-            <version>2.5</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.servlet.jsp</groupId>
-            <artifactId>jsp-api</artifactId>
-            <version>2.1</version>
-            <scope>provided</scope>
-        </dependency>
+        <!--   同上
+                 <dependency>
+                        <groupId>javax.servlet</groupId>
+                        <artifactId>servlet-api</artifactId>
+                        <version>2.5</version>
+                        <scope>provided</scope>
+                </dependency>
+        -->
     </dependencies>
 
     <build>
         <finalName>SeasonConnectSQL</finalName>
+    </build>
+
+    <build>
+        <finalName>SeasonConnectionSQL</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 
 </project>
