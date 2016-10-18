@@ -324,11 +324,7 @@ public class ReviewService {
                 </dependency>
         -->
     </dependencies>
-
-    <build>
-        <finalName>SeasonConnectSQL</finalName>
-    </build>
-
+    
     <build>
         <finalName>SeasonConnectionSQL</finalName>
         <plugins>
