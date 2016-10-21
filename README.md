@@ -18,9 +18,16 @@ RDATE DATETIME	default CURRENT_TIMESTAMP		 -- 评论时间
 ```
 
 ## 后台
+
++ 项目目录结构
+
 ![项目目录结构](img/项目目录结构.png)
 
++ 添加评论之前
+
 ![效果图1](img/效果图1.png)
+
++ 添加评论之后
 
 ![效果图2](img/效果图2.png)
 
