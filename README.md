@@ -20,6 +20,10 @@ RDATE DATETIME	default CURRENT_TIMESTAMP		 -- 评论时间
 ## 后台
 ![项目目录结构](img/项目目录结构.png)
 
+![效果图1](img/效果图1.png)
+
+![效果图2](img/效果图2.png)
+
 1、Season启动类：APP.java
 ```java
 package com.trs.config;
@@ -29,6 +33,7 @@ import com.season.core.spring.SeasonRunner;
 /**
  * Created by wangjie on 2016/10/14 0014.
  */
+
 public class App extends SeasonApplication {
 
     public static void main(String[] args){
@@ -40,45 +45,17 @@ public class App extends SeasonApplication {
 
 2、配置启动类：ServletInitializer.java
 ```java
-package com.trs;
-import com.season.core.spring.SeasonApplication;
-import com.season.core.spring.SeasonRunner;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+package com.trs.config;
 
-import javax.sql.DataSource;
+import com.season.core.spring.SeasonServletInitializer;
 
 /**
  * Created by wangjie on 2016/10/14 0014.
  */
-@Configuration
-@EnableAutoConfiguration
-@ComponentScan
-public class App extends SeasonApplication {
-
-    public static void main(String[] args){
-        SeasonRunner.run(App.class,args);
-    }
-
-    @Bean
-    public JdbcTemplate jdbcTemplate(DataSource dataSource){
-        return new JdbcTemplate(dataSource);
-    }
-
-    @Bean
-    public DataSource dataSource(){
-        DriverManagerDataSource ds=new DriverManagerDataSource();
-        ds.setDriverClassName("com.mysql.jdbc.Driver");
-        ds.setUrl("jdbc:mysql:///TRSWCMV7");
-        ds.setUsername("root");
-        ds.setPassword("MySQL_1234");
-        return ds;
+public class ServletInitializer extends SeasonServletInitializer{
+    @Override
+    protected Class<?> getAppClass() {
+        return App.class;
     }
 }
 ```
@@ -88,37 +65,55 @@ package com.trs.controller;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
+import com.season.core.ActionKey;
 import com.season.core.Controller;
 import com.season.core.ControllerKey;
 import com.trs.domain.Review;
 import com.trs.service.ReviewService;
+import com.trs.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
 /**
- * Created by wangjie on 2016/10/14 0014.
+ * Created by wangjie on 2016/10/20 0020.
  */
-@ControllerKey("hello")
-public class TestController extends Controller {
+@ControllerKey(value = "hello")
+public class ReviewController extends Controller{
 
     @Autowired
     private ReviewService reviewService;
 
-
-    public void save() {
-        String RName = getPara("RName");
-        String RContent = getPara("RContent");
-        Review review=new Review(RName,RContent);
-        int a=reviewService.saveReview(review);
-        renderText("受影响的行数"+a);   //http://localhost:8080/hello/save?RName=WJ&RContent=%E5%86%85%E5%AE%B9%E7%95%8C%E9%9D%A2&URL=asdasdasdasd
+    /**
+     * 查找相关商品的评论
+     */
+    @ActionKey(value = "get")
+    public void getReviewsByName(){
+        String reviewName=getPara("reviewName");
+        if(StringUtils.hasLength(reviewName)){
+            List<Review> lists=reviewService.getReviewsByName(reviewName);
+            renderText(((JSON)JSONArray.toJSON(lists)).toJSONString());
+            return;
+        }else{
+            renderText("参数未赋值！");
+        }
     }
 
-    public void get() {
-        String RName=getPara("RName");
-        List<Review> lists=reviewService.getReviewByName(RName);
-        JSON json= (JSON) JSONArray.toJSON(lists);
-        renderText(json.toJSONString());
+    /**
+     * 处理评论保存
+     */
+    @ActionKey(value = "save")
+    public void saveReview(){
+        String reviewName=getPara("reviewName");
+        String reviewContent=getPara("reviewContent");
+        if(StringUtils.hasLength(reviewName) && StringUtils.hasLength(reviewContent)){
+            Review review=new Review(reviewName,reviewContent);
+            reviewService.saveReview(review);
+            return;
+        }else{
+            renderText("缺少参数值！");
+        }
+
     }
 }
 ```
@@ -127,45 +122,34 @@ public class TestController extends Controller {
 ```java
 package com.trs.dao;
 
+import com.season.core.db.Dao;
 import com.trs.domain.Review;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
-import java.sql.*;
 import java.util.List;
 
 /**
- * Created by wangjie on 2016/10/15 0015.
+ * Created by wangjie on 2016/10/20 0020.
  */
 @Repository
 public class ReviewDao {
 
-
-    @Autowired
-    private  JdbcTemplate jdbcTemplate;
-
-    public List<Review> getReviewsByName(String Rname){
-        String sql = "SELECT * FROM review where RNAME=?";
-        Object[] params=new Object[]{Rname};
-        return jdbcTemplate.query(sql, params, new RowMapper<Review>() {
-            @Override
-            public Review mapRow(ResultSet resultSet, int i) throws SQLException {
-                Review review=new Review();
-                review.setRID(resultSet.getInt("RID"));
-                review.setCONTENT(resultSet.getString("RCONTENT"));
-                review.setRNAME(resultSet.getString("RNAME"));
-                review.setRDATE(resultSet.getDate("RDATE"));
-                return review;
-            }
-        });
+    /**
+     * 按照商品名字查找评论信息
+     * @param reviewName
+     * @return  返回该商品的所有评论
+     */
+    public List<Review> getReviewsByName(String reviewName){
+        return Dao.findByColumn(Review.class,"reviewName",reviewName);
     }
 
-    public int saveReview(Review review){
-        String sql="INSERT INTO review(RNAME,RCONTENT) values(?,?)";
-        Object[] params=new Object[]{review.getRNAME(),review.getCONTENT()};
-        return jdbcTemplate.update(sql,params);
+    /**
+     * 保存评论
+     * @param review
+     * @return 当前保存的评论，具有所有字段信息
+     */
+    public Review saveReview(Review review){
+        return review.save();
     }
 }
 ```
@@ -174,75 +158,71 @@ public class ReviewDao {
 ```java
 package com.trs.domain;
 
+import com.season.core.db.Pojo;
+import com.season.core.db.annotation.TableInfo;
+import com.season.core.db.annotation.Transient;
 
-import java.sql.Date;
+import java.util.Date;
 
 /**
- * Created by wangjie on 2016/10/14 0014.
- * 实体类
+ * Created by wangjie on 2016/10/20 0020.
  */
-public class Review {
+@TableInfo(tableName = Review.tabelName,pkName = "reviewId")
+public class Review extends Pojo<Review>{
 
-    private int RID;
-    private String RNAME;
-    private String CONTENT;
-    private Date RDATE;     //向数据库插入的时候，使用触发器。
+    @Transient
+    public final static String tabelName="review";
 
-    public int getRID() {
-        return RID;
+    private int reviewId;  //参数名称设置····
+    private String reviewName;
+    private String reviewContent;
+    private Date reviewDate;   //日期类型的数据
+
+    public int getReviewId() {
+        return reviewId;
     }
 
-    public void setRID(int RID) {
-        this.RID = RID;
+    public void setReviewId(int reviewId) {
+        this.reviewId = reviewId;
     }
 
-    public String getRNAME() {
-        return RNAME;
+    public String getReviewName() {
+        return reviewName;
     }
 
-    public void setRNAME(String RNAME) {
-        this.RNAME = RNAME;
+    public void setReviewName(String reviewName) {
+        this.reviewName = reviewName;
     }
 
-    public String getCONTENT() {
-        return CONTENT;
+    public String getReviewContent() {
+        return reviewContent;
     }
 
-    public void setCONTENT(String CONTENT) {
-        this.CONTENT = CONTENT;
+    public void setReviewContent(String reviewContent) {
+        this.reviewContent = reviewContent;
     }
 
-    public Date getRDATE() {
-        return RDATE;
+    public Date getReviewDate() {
+        return reviewDate;
     }
 
-    public void setRDATE(Date RDATE) {
-        this.RDATE = RDATE;
-    }
-
-    public Review(String RNAME, String CONTENT) {
-        this.RNAME = RNAME;
-        this.CONTENT = CONTENT;
-    }
-
-    public Review(String RNAME, String CONTENT,Date DATE) {
-        this.RNAME = RNAME;
-        this.CONTENT = CONTENT;
-        this.RDATE=DATE;
-    }
-
-
-    @Override
-    public String toString() {
-        return "Review{" +
-                "RID=" + RID +
-                ", RNAME='" + RNAME + '\'' +
-                ", CONTENT='" + CONTENT + '\'' +
-                ", RDATE=" + RDATE +
-                '}';
+    public void setReviewDate(Date reviewDate) {
+        this.reviewDate = reviewDate;
     }
 
     public Review() {
+    }
+
+    public Review(String reviewName, String reviewContent) {
+        this.reviewName = reviewName;
+        this.reviewContent = reviewContent;
+    }
+
+    public Review(int reviewId, String reviewName, String reviewContent, Date reviewDate) {
+        this.reviewId = reviewId;
+        this.reviewName = reviewName;
+        this.reviewContent = reviewContent;
+        this.reviewDate = reviewDate;
     }
 }
 ```
@@ -259,7 +239,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Created by wangjie on 2016/10/14 0014.
+ * Created by wangjie on 2016/10/20 0020.
  */
 @Service
 public class ReviewService {
@@ -267,23 +247,23 @@ public class ReviewService {
     @Autowired
     private ReviewDao reviewDao;
 
-    /***
-     * 按照名称查找所有评论
-     * @param Rname
+    /**
+     * 通过商品名称来获取评论，
+     * @param reviewName
      * @return
      */
-    public List<Review> getReviewByName(String Rname){
-        return reviewDao.getReviewsByName(Rname);
+    public List<Review>  getReviewsByName(String reviewName){
+        return reviewDao.getReviewsByName(reviewName);
     }
 
     /**
      * 保存评论
      * @param review
+     * @return
      */
-    public int saveReview(Review review){
+    public Review saveReview(Review review){
         return reviewDao.saveReview(review);
     }
-
 }
 ```
 
@@ -298,37 +278,30 @@ public class ReviewService {
     <groupId>trs.com.cn1</groupId>
     <artifactId>SeasonConnectSQL</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <packaging>war</packaging>
+    <packaging>jar</packaging>
 
     <parent>
         <artifactId>season-parent</artifactId>
         <groupId>trs.com.cn</groupId>
-        <version>1.2</version>
+        <version>1.4-SNAPSHOT</version>
     </parent>
 
     <dependencies>
         <dependency>
             <groupId>trs.com.cn</groupId>
             <artifactId>season-core</artifactId><!-- 其中包含了好多依赖  -->
-            <!--   要运行在其他Tomcat服务器上时，要打成war包，并需要取消注释
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.springframework.boot</groupId>
-                        <artifactId>spring-boot-starter-tomcat</artifactId>
-                    </exclusion>
-                </exclusions>
-            -->
         </dependency>
-        <!--   同上
-                 <dependency>
-                        <groupId>javax.servlet</groupId>
-                        <artifactId>servlet-api</artifactId>
-                        <version>2.5</version>
-                        <scope>provided</scope>
-                </dependency>
-        -->
     </dependencies>
-    
+
+    <!--因为Season代码发布在海尔仓库中，所以要引入海尔代码仓库-->
+    <repositories>
+        <repository>
+           <id>haier-maven-repository</id>
+            <url>http://test.haier.com/nexus/content/groups/public/</url>
+        </repository>
+    </repositories>
+
+
     <build>
         <finalName>SeasonConnectionSQL</finalName>
         <plugins>
@@ -342,7 +315,21 @@ public class ReviewService {
 </project>
 ```
 
-## 前台商品详细信息模板代码
+8、StringUtils.java
+```java
+package com.trs.utils;
+
+/**
+ * Created by wangjie on 2016/10/20 0020.
+ */
+public class StringUtils {
+    public static boolean hasLength(String s){
+        return s !=null && !"".equals(s.trim());
+    }
+}
+```
+
+## 商品详情页HTML代码
 ```html
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="cn">
@@ -351,32 +338,26 @@ public class ReviewService {
 <h1 style="display:none" class="nav_hide">产品详情</h1>
 <title>产品详情</title>
 
-<script type="text/javascript" src="../../JS/jquery-1.11.1.js"></script>
+<script type="text/javascript" src="../../JS/jquery-1.8.3.js"></script>
 <script type="text/javascript">
 $(document).ready(function(){
 
-//显示所有商品的所有评论
-
 $("#b05").click(function(){
-	 $.getJSON("http://localhost:8080/SeasonConnectSQL/hello/get",
-	 {"RName":$("#b05_1").attr("value")},   //向后台传递参数  商品的名称！！！
+	 $.getJSON("http://localhost:8080/hello/get",
+	 {"reviewName":$("#b05_1").attr("value")},   //向后台传递参数  商品的名称！！！
 	 function(data) {
         $("#myDiv5").html("");
         $.each(data, function(i, item) {
             $("#myDiv5").append(
 		 "<div>游客" + (i+1) + "</div>" + 
-                    "<div>" + item.cONTENT + "</div>" + 
-                    "<div>" + item.rDATE    + "</div>" +
-                    "<div>" + item.rNAME + "</div><hr/>");
+                    "<div>" + item.reviewContent+ "</div><hr/>");
         });
         });
    });
 
-//提交评论信息
-
 $("#b06").click(function(){
-	 $.getJSON("http://localhost:8080/SeasonConnectSQL/hello/save",
-	 {RName:$("#b05_1").attr("value"),RContent:$("input[id='b06_1']").val()},   //向后台传递参数  商品的名称,商品评价！！！！
+	 $.getJSON("http://localhost:8080/hello/save",
+	 {reviewName:$("#b05_1").attr("value"),reviewContent:$("input[id='b06_1']").val()},   //向后台传递参数  商品的名称,商品评价！！！！
 	 function(data) {
         $("#myDiv5").html("");
         $.each(data, function(i, item) {
@@ -392,40 +373,29 @@ $("#b06").click(function(){
 
 <body>
 
-
 <div style="margin:0 auto; width:950px;">
 
-<TRS_XAPPENDIXS ID="OWNER" MODE="PIC">
- <img src='<TRS_XAPPENDIX FIELD="_RECURL" upload="true"/>' border=0 alt="图片不存在！" width="80" height="80" /> 
-</TRS_XAPPENDIXS>  <br/>
-
+ <img src='./W020161012620414047685.png' border=0 alt="图片不存在！" width="80" height="80" /> 
+  <br/>
 
 <h2>显示商品详情：</h2>
 
-<TRS_DOCUMENT field="DOCCONTENT"  dateformat="yyyy-MM-dd HH:mm:ss" autocolor="TRUE" autoformat="FALSE" autoformattype="HTML" autolink="FALSE"  target="_blank" linkalt="FALSE" ></TRS_DOCUMENT>
+<div style="margin:0 auto; width:950px;"><p style="text-indent:2em;">	<h1>		<span style="color:#000000;font-family:SimSun;">&nbsp;&nbsp;牙膏详情</span><br/>		<span style="color:#000000;font-family:SimSun;">&nbsp;&nbsp;￥ 2340</span>	</h1></p></div>
 
 <br/>
-<h2>显示评论：</h2><br/>
-
-<!--使用模板显示评论表中的信息评论-->
-<TRS_DEFOBJECTS TABLENAME="review" IDFIELDNAME="RID" where="RNAME='电脑'">
-评论内容：<TRS_DEFOBJECT FIELD="RCONTENT"/><br/>
-发布时间：<TRS_DEFOBJECT FIELD="RDATE" DATEFORMAT="yyyy-MM-dd"/><br/><br/>
-</TRS_DEFOBJECTS>
-
 
 <!--使用JS解析JSON数据-->
 <div id="myDiv5"><h2>显示评论</h2></div>
-<input id="b05_1" type="hidden" name="content" title="Review Content" value="<TRS_DOCUMENT field="DOCTITLE"          ></TRS_DOCUMENT>" /><br/>
+<input id="b05_1" type="hidden" name="content" title="Review Content" value="牙膏" /><br/>
 <button id="b05" type="button">显示更多评论</button><br/>
 
-   请书写评论：<input id="b06_1" type="text" name="text" title="Review Content" />
+   请填写评论：<input id="b06_1" type="text" name="text" title="Review Content" />
 <button id="b06" type="button">提交评论：</button> 
 
 </div>
 
 </body>
-</html> 
+</html>
 ```
 
 
