@@ -1,6 +1,10 @@
 # Study4
 评论互动功能实现
 
+项目GitHub地址：https://github.com/WangJieWJ/ProductReview.git
+
+项目GitLab地址：git@gitlab.trs.com:wangjie/ProductReview.git
+
 ## 数据库设计
 
 ```sql
